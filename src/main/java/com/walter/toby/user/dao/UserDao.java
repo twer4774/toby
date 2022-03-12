@@ -2,12 +2,20 @@ package com.walter.toby.user.dao;
 
 import com.walter.toby.user.domain.User;
 
+import javax.sql.DataSource;
 import java.sql.*;
 
 
 public class UserDao {
 
     private ConnectionMaker connectionMaker; // 인터페이스를 통해 오브젝트에 접근하므로 구체적인 클래스 정보를 알 필요가 없다.
+
+    private JdbcContext jdbcContext;
+
+    public void setJdbcContext(JdbcContext jdbcContext) {
+        this.jdbcContext = jdbcContext;
+    }
+
 
     // 생성자 주입방식
 //    public UserDao(ConnectionMaker connectionMaker) {
@@ -210,6 +218,8 @@ public class UserDao {
         jdbcContextWithStatementStrategy(st);
     }*/
 
+
+    /*
     // 익명 클래스를 이용한 add - 전략마다 파일이 생성되는 것을 방지하기 위함
     public void add(final User user) throws ClassNotFoundException, SQLException {
 
@@ -240,7 +250,7 @@ public class UserDao {
     }
 
 
-    // DI 적용을 위한 클라이언트/컨텍스트 분리
+   // DI 적용을 위한 클라이언트/컨텍스트 분리 => JdbcContext 클래스로 분리
     public void jdbcContextWithStatementStrategy(StatementStrategy stmt) throws SQLException, ClassNotFoundException {
         Connection c = null;
         PreparedStatement ps = null;
@@ -270,7 +280,43 @@ public class UserDao {
                 }
             }
         }
+    }*/
+
+
+    // jdbc 클래스 분리 이용
+    public void add(final User user) throws SQLException {
+        this.jdbcContext.worktWithStatementStrategy(
+                new StatementStrategy() {
+                    @Override
+                    public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+                        PreparedStatement ps = c.prepareStatement("insert into users(id, name, password) values(?,?,?)");
+                        ps.setString(1, user.getId());
+                        ps.setString(2, user.getName());
+                        ps.setString(3, user.getPassword());
+
+                        return ps;
+                    }
+                }
+        );
     }
+
+    /*public void deleteAll() throws SQLException {
+        this.jdbcContext.worktWithStatementStrategy(
+                new StatementStrategy() {
+                    @Override
+                    public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+                        return c.prepareStatement("delete from users");
+                    }
+                }
+        );
+    }*/
+
+    // 콜백의 분리와 재사용
+    public void deleteAll() throws SQLException {
+        this.jdbcContext.executeSql("delete from users");
+    }
+
+
     /*public int getCount() throws SQLException, ClassNotFoundException {
 
         Connection c = connectionMaker.makeConnection();
