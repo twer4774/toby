@@ -1,12 +1,14 @@
 package com.walter.toby.user.domain;
 
+import com.walter.toby.ServiceAbstract.Level;
+
 public class User {
 
     String id;
     String name;
     String password;
 
-    public User(String id, String name, String password) {
+    public User(String id, String name, String password, Level basic, int i, int i1) {
         this.id = id;
         this.name = name;
         this.password = password;
