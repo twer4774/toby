@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.transaction.PlatformTransactionManager;
 
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -22,9 +24,15 @@ class UserServiceTest {
     @Autowired
     UserService userService;
 
+    @Autowired
+    DataSource dataSource;
+
     UserDao userDao;
 
     List<User> users;
+
+    @Autowired
+    PlatformTransactionManager transactionManager;
 
     @BeforeEach
     public void setUp(){
@@ -38,7 +46,7 @@ class UserServiceTest {
     }
 
     @Test
-    void upgradeLevels() throws SQLException, ClassNotFoundException {
+    void upgradeLevels() throws Exception {
 
         userDao.deleteAll();
 
@@ -87,5 +95,31 @@ class UserServiceTest {
         assertEquals(userWithoutLevelRead.getLevel(), userWithoutLevel.getLevel());
     }
 
+    // 강제 예외 발생을 통한 테스트 - 예외 발생 시 작업 취소 여부 테스트
+    @Test
+    public void upgradeAllOrNothing() throws SQLException, ClassNotFoundException {
+        UserService testUserService = new UserService.TestUserService(users.get(3).getId());
+        testUserService.setUserDao(this.userDao); // 수동 DI
+//        testUserService.setDataSource(this.dataSource);
+        testUserService.setTransactionManager(transactionManager); //수동 DI
+        userDao.deleteAll();
+
+        for(User user : users){
+           userDao.add(user);
+        }
+
+        try{
+            // 업그레이드 작업 중 예외를 발생시켜야 한다. 정상 종료가 되면 실패
+            testUserService.upgradeLevels();
+            fail("TestUSerServiceException expected");
+        } catch (UserService.TestUserService.TestUserServiceException e){
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        checkLevelUpgrade(users.get(1), false); // 예외가 발생하기 전에 레벨 변경이 있었던 사용자의 레벨이 처음 상태로 바뀌었나 확인
+
+    }
 
 }
