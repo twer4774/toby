@@ -1,5 +1,7 @@
 package com.walter.toby.ServiceAbstract.service;
 
+import com.walter.toby.Aop.UserServiceImpl;
+import com.walter.toby.Aop.UserServiceTx;
 import com.walter.toby.ServiceAbstract.Level;
 import com.walter.toby.ServiceAbstract.User;
 import com.walter.toby.ServiceAbstract.UserDao;
@@ -7,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailSender;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -34,6 +37,10 @@ class UserServiceTest {
     @Autowired
     PlatformTransactionManager transactionManager;
 
+    @Autowired
+    MailSender mailSender;
+
+
     @BeforeEach
     public void setUp(){
         users = Arrays.asList(
@@ -48,6 +55,7 @@ class UserServiceTest {
     @Test
     void upgradeLevels() throws Exception {
 
+
         userDao.deleteAll();
 
         for(User user : users) userDao.add(user);
@@ -59,6 +67,7 @@ class UserServiceTest {
         checkLevelUpgrade(users.get(2), false);
         checkLevelUpgrade(users.get(3), true);
         checkLevelUpgrade(users.get(4), false);
+
 
 
     }
@@ -101,7 +110,13 @@ class UserServiceTest {
         UserService testUserService = new UserService.TestUserService(users.get(3).getId());
         testUserService.setUserDao(this.userDao); // 수동 DI
 //        testUserService.setDataSource(this.dataSource);
-        testUserService.setTransactionManager(transactionManager); //수동 DI
+//        testUserService.setTransactionManager(transactionManager); //수동 DI
+
+        // 트랜잭션 기능 분리
+        UserServiceTx txUserService = new UserServiceTx();
+        txUserService.setTransactionManager(transactionManager);
+        txUserService.setUserService((com.walter.toby.Aop.UserService) testUserService);
+
         userDao.deleteAll();
 
         for(User user : users){
@@ -109,6 +124,9 @@ class UserServiceTest {
         }
 
         try{
+            // 트랜잭션 기능을 분리한 오브젝트를 통해 예외 발생용 TestUSerService가 호출되게 해야 한다.
+            txUserService.upgradeLevels();
+            
             // 업그레이드 작업 중 예외를 발생시켜야 한다. 정상 종료가 되면 실패
             testUserService.upgradeLevels();
             fail("TestUSerServiceException expected");

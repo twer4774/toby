@@ -157,7 +157,7 @@ public class UserService {
             message.setFrom(new InternetAddress("useradmin@ksung.org"));
             message.addRecipient(Message.RecipientType.TO, new InternetAddress(user.getEmail()));
             message.setSubject("Upgrade 안내");
-            message.setText("사용자님의 등급이 " + user.getLevel().name() + "로 업그레디으 되었습니다.");
+            message.setText("사용자님의 등급이 " + user.getLevel().name() + "로 업그레이드 되었습니다.");
 
             Transport.send(message);
         } catch (AddressException e) {
